@@ -1,0 +1,36 @@
+# NebulaVault
+
+NebulaVault is a secure CLI tool that allows developers to encrypt, manage, and synchronize sensitive files and environment variables across multiple projects and devices.
+
+## Features
+
+* AES-256 file encryption
+* Secure `.env` management
+* Multi-device synchronization
+* Password-protected vaults
+* Backup and restore support
+* Cross-platform (Windows, Linux, macOS)
+* Git-friendly workflow
+
+## Example Usage
+
+```bash
+# Create a new vault
+nebula init
+
+# Add a secret file
+nebula add .env
+
+# Encrypt and save
+nebula lock
+
+# Decrypt and access files
+nebula unlock
+
+# Sync with remote storage
+nebula sync
+```
+
+## Why NebulaVault?
+
+Developers often struggle with securely sharing API keys, environment files, and confidential project assets. NebulaVault provides a simple, secure, and developer-friendly solution that integrates naturally with existing Git workflows.
