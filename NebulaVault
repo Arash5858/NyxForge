@@ -29,6 +29,13 @@ nebula unlock
 
 # Sync with remote storage
 nebula sync
+# Create a new vault
+nebula init
+
+# Add a secret file
+nebula add .env
+
+
 ```
 
 ## Why NebulaVault?
