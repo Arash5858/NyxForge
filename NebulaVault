@@ -14,6 +14,15 @@ NebulaVault is a secure CLI tool that allows developers to encrypt, manage, and 
 
 ## Example Usage
 
+
+# Sync with remote storage
+nebula sync
+# Create a new vault
+nebula init
+
+# Add a secret file
+nebula add .env
+
 ```bash
 # Create a new vault
 nebula init
@@ -26,15 +35,6 @@ nebula lock
 
 # Decrypt and access files
 nebula unlock
-
-# Sync with remote storage
-nebula sync
-# Create a new vault
-nebula init
-
-# Add a secret file
-nebula add .env
-
 
 ```
 
