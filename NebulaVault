@@ -11,7 +11,10 @@ NebulaVault is a secure CLI tool that allows developers to encrypt, manage, and 
 * Backup and restore support
 * Cross-platform (Windows, Linux, macOS)
 * Git-friendly workflow
-
+* Secure `.env` management
+* Multi-device synchronization
+* Password-protected vaults
+* Backup and restore support
 ## Example Usage
 
 
