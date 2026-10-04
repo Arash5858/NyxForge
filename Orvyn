@@ -1,0 +1,221 @@
+orvyn/
+├── orvyn.py
+├── endpoints.json
+├── README.md
+└── .gitignore
+#!/usr/bin/env python3
+
+import argparse
+import json
+import time
+import urllib.request
+import urllib.error
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class CheckResult:
+    name: str
+    url: str
+    status: str
+    status_code: int | None
+    latency_ms: float
+    error: str | None = None
+
+
+def load_endpoints(file_path: str):
+    path = Path(file_path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {path}")
+
+    with path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    if not isinstance(data, list):
+        raise ValueError("Configuration must contain a JSON array.")
+
+    return data
+
+
+def check_endpoint(endpoint, timeout):
+    name = endpoint.get("name", "Unnamed")
+    url = endpoint["url"]
+
+    start = time.perf_counter()
+
+    request = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "User-Agent": "Orvyn/1.0"
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            elapsed = (time.perf_counter() - start) * 1000
+
+            return CheckResult(
+                name=name,
+                url=url,
+                status="UP",
+                status_code=response.status,
+                latency_ms=elapsed
+            )
+
+    except urllib.error.HTTPError as error:
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return CheckResult(
+            name=name,
+            url=url,
+            status="HTTP_ERROR",
+            status_code=error.code,
+            latency_ms=elapsed,
+            error=str(error)
+        )
+
+    except urllib.error.URLError as error:
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return CheckResult(
+            name=name,
+            url=url,
+            status="DOWN",
+            status_code=None,
+            latency_ms=elapsed,
+            error=str(error.reason)
+        )
+
+    except TimeoutError:
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return CheckResult(
+            name=name,
+            url=url,
+            status="TIMEOUT",
+            status_code=None,
+            latency_ms=elapsed,
+            error="Request timed out"
+        )
+
+    except Exception as error:
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return CheckResult(
+            name=name,
+            url=url,
+            status="ERROR",
+            status_code=None,
+            latency_ms=elapsed,
+            error=str(error)
+        )
+
+
+def print_result(result: CheckResult):
+    status_map = {
+        "UP": "OK",
+        "HTTP_ERROR": "HTTP",
+        "DOWN": "DOWN",
+        "TIMEOUT": "TIMEOUT",
+        "ERROR": "ERROR"
+    }
+
+    label = status_map.get(result.status, result.status)
+
+    print(
+        f"{result.name:<20} "
+        f"{label:<8} "
+        f"{str(result.status_code or '-'):>5} "
+        f"{result.latency_ms:>9.2f} ms"
+    )
+
+    if result.error:
+        print(f"  Error: {result.error}")
+
+
+def print_summary(results):
+    total = len(results)
+    healthy = sum(result.status == "UP" for result in results)
+
+    if results:
+        average_latency = (
+            sum(result.latency_ms for result in results) / total
+        )
+    else:
+        average_latency = 0
+
+    availability = (healthy / total * 100) if total else 0
+
+    print("\n" + "=" * 65)
+    print("ORVYN SUMMARY")
+    print("=" * 65)
+    print(f"Endpoints checked : {total}")
+    print(f"Healthy endpoints : {healthy}")
+    print(f"Availability      : {availability:.2f}%")
+    print(f"Average latency   : {average_latency:.2f} ms")
+    print("=" * 65)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Orvyn - Lightweight API health monitor"
+    )
+
+    parser.add_argument(
+        "-c",
+        "--config",
+        default="endpoints.json",
+        help="Path to endpoint configuration"
+    )
+
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        type=float,
+        default=5,
+        help="Request timeout in seconds"
+    )
+
+    args = parser.parse_args()
+
+    try:
+        endpoints = load_endpoints(args.config)
+    except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
+        print(f"Configuration error: {error}")
+        return 1
+
+    if not endpoints:
+        print("No endpoints configured.")
+        return 1
+
+    print("\nOrvyn API Health Monitor\n")
+
+    print(
+        f"{'Endpoint':<20} "
+        f"{'Status':<8} "
+        f"{'Code':>5} "
+        f"{'Latency':>12}"
+    )
+
+    print("-" * 65)
+
+    results = []
+
+    for endpoint in endpoints:
+        if "url" not in endpoint:
+            continue
+
+        result = check_endpoint(endpoint, args.timeout)
+        results.append(result)
+        print_result(result)
+
+    print_summary(results)
+
+    return 0 if all(result.status == "UP" for result in results) else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
